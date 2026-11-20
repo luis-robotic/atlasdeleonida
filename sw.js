@@ -1,6 +1,6 @@
 // Funciona sin conexión: guarda la página y el mapa base. Cambia de versión en cada publicación.
-const V = "atlas-202611201534";
-self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(["./", "index.html", "manifest.webmanifest", "assets/leonida-dia.761136ad.svg"]))); self.skipWaiting(); });
+const V = "atlas-202611201830";
+self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(["./", "index.html", "manifest.webmanifest", "assets/leonida-dia.ace46761.svg"]))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
