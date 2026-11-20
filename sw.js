@@ -1,5 +1,5 @@
 // Funciona sin conexión: guarda la página (todo va dentro de index.html). Cambia de versión en cada publicación.
-const V = "atlas-202611201125";
+const V = "atlas-202611201043";
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(["./", "index.html", "manifest.webmanifest"]))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {
