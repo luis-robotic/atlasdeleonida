@@ -1,0 +1,11 @@
+{
+  "name": "Atlas de Leonida · Explicado en 60",
+  "short_name": "Atlas Leonida",
+  "description": "Mapa de fans de GTA 6 en español, con fuentes. No oficial.",
+  "lang": "es", "start_url": "./?pwa=1", "scope": "./", "display": "standalone",
+  "background_color": "#0b1119", "theme_color": "#0b1119",
+  "icons": [
+    {"src": "icons/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icons/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
