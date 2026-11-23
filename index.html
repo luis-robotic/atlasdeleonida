@@ -1044,6 +1044,32 @@ button:active:not(:disabled), .leaflet-control-zoom a:active { transform: scale(
 /* El hueco de anuncio y el botón «próximamente» parecían sin terminar: fuera hasta que haya algo real */
 .publica .hueco-anuncio, .publica .btn-apoyo:disabled { display: none; }
 
+
+
+/* ---- Logros, racha, ruta del día, vista previa (23/11, 2ª ronda) ---- */
+.logros .medallas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.medalla { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 2px 6px; border-radius: 10px; background: var(--noche, #0b1119); border: 1px solid var(--linea); text-align: center; filter: grayscale(1); opacity: .45; transition: opacity .3s, filter .3s, transform .2s; }
+.medalla i { font-style: normal; font-size: 20px; line-height: 1; }
+.medalla small { font-size: 9px; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; color: var(--suave); font-weight: 600; }
+.medalla.si { filter: none; opacity: 1; border-color: rgba(255,224,102,.5); background: radial-gradient(circle at 50% 30%, rgba(255,224,102,.16), transparent 70%), var(--noche, #0b1119); }
+.medalla.si small { color: #fff; }
+.medalla:hover { transform: translateY(-2px); }
+.racha { color: #ffb86b; font-weight: 700; }
+.fila-botones { display: flex; gap: 8px; }
+.btn-sec { flex: 1; padding: 9px 6px; border-radius: 10px; border: 1px solid var(--linea); background: var(--panel); color: var(--texto); font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.btn-sec:hover, .btn-sec[aria-pressed="true"] { border-color: #ffe066; color: #ffe066; }
+.toast .t-logro { float: left; font-size: 30px; line-height: 1; margin: 2px 10px 0 0; animation: logro-gira .7s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes logro-gira { from { transform: scale(0) rotate(-40deg); } to { transform: none; } }
+.ruta-dia { stroke-dasharray: 10 9; stroke-linecap: round; animation: ruta-avanza 1.2s linear infinite; filter: drop-shadow(0 0 4px rgba(255,224,102,.8)); }
+@keyframes ruta-avanza { to { stroke-dashoffset: -19; } }
+.ruta-n { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #ffe066; color: #1a1300; font: 800 11px/1 system-ui, sans-serif; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.ruta-n.si { background: var(--ok); color: #06210f; }
+@media (min-width: 761px) { .capas-rapidas { max-width: calc(100vw - var(--ancho-panel, 360px) - 220px); } .panel-cerrado .capas-rapidas { max-width: calc(100vw - 220px); } }
+.capas-rapidas .ruta-chip { border-color: rgba(255,224,102,.55); }
+.leaflet-tooltip.prev { background: rgba(14,21,31,.96); color: #e9eef4; border: 1px solid rgba(255,255,255,.15); border-radius: 9px; padding: 6px 9px; box-shadow: 0 8px 22px rgba(0,0,0,.5); font: 13px/1.3 system-ui, sans-serif; animation: pop-entra .15s ease-out both; }
+.leaflet-tooltip.prev b { display: block; color: #fff; }
+.leaflet-tooltip.prev small { color: #9fb0c3; font-size: 11.5px; }
+.leaflet-tooltip.prev::before { border-top-color: rgba(14,21,31,.96); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
 <style>/* Extras: QR, modo mando, overlay OBS */
@@ -3758,6 +3784,7 @@ var qrcode = function() {
     mapa.on("zoomend", function () { zoomCondados(); if (typeof pintar === "function") pintar(); }); zoomCondados();
     var marcadores = {};
     var activo = null;
+    var CON_RATON = window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
     var foco = null; // capa rápida activa (solo esa categoría, con todos sus puntos)
     function icono(p) {
       var c = CATEGORIAS[p.categoria] || { color: "#ccc", glifo: "M12 8v5M12 16h.01" };
@@ -3798,6 +3825,7 @@ var qrcode = function() {
       m.on("popupclose", function () { document.body.classList.remove("con-popup"); if (activo === p.id) activo = null; m.setIcon(icono(p)); });
       if (/^(ciudad|barrio|monumento|ocio|naturaleza)$/.test(p.categoria) && !porRegion[p.id])
         m.bindTooltip(esc(p.nombre), { permanent: true, direction: "right", className: "etq-lugar etq-" + p.categoria, interactive: false });
+      else if (CON_RATON) m.bindTooltip('<b>' + esc(p.nombre) + '</b><small>' + esc((CATEGORIAS[p.categoria] || {}).nombre || "") + (visitados[p.id] ? " · ✓" : "") + "</small>", { direction: "top", offset: [0, -14], className: "prev", opacity: 1 });
       marcadores[p.id] = { m: m, p: p };
     });
 
@@ -3810,6 +3838,7 @@ var qrcode = function() {
         guardar("visitados", visitados); b.textContent = textoVisto(marcadores[id].p);
         marcadores[id].m.setIcon(icono(marcadores[id].p)); pintar(); pintarNiebla();
         if (visitados[id]) celebrar(b, marcadores[id].p); else vibrar(10);
+        setTimeout(comprobarLogros, 1200); pintarRuta();
         medir("visto/" + id + "/" + (visitados[id] ? "on" : "off"));
       } else {
         var url = location.href.split("#")[0] + "#" + id;
@@ -4094,8 +4123,8 @@ var qrcode = function() {
     capas.onAdd = function () {
       var d = L.DomUtil.create("div", "capas-rapidas"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
       d.setAttribute("role", "toolbar"); d.setAttribute("aria-label", "Ver solo una categoría");
-      d.innerHTML = RAPIDAS.map(function (k) { var c = CATEGORIAS[k]; return '<button type="button" data-capa="' + k + '" style="--c:' + c.color + '" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + c.glifo + '"/></svg><span>' + esc(CORTO[k]) + '</span><b data-prog="' + k + '"></b></button>'; }).join("");
-      d.addEventListener("click", function (ev) { var b = ev.target.closest("[data-capa]"); if (!b) return; var k = b.getAttribute("data-capa"); ponerFoco(foco === k ? null : k); });
+      d.innerHTML = '<button type="button" class="ruta-chip" data-ruta="1" style="--c:#ffe066" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19a2 2 0 1 0 0-.01M19 5a2 2 0 1 0 0-.01M5 17V9a4 4 0 0 1 8 0v6a4 4 0 0 0 8 0V7"/></svg><span>Ruta del día</span></button>' + RAPIDAS.map(function (k) { var c = CATEGORIAS[k]; return '<button type="button" data-capa="' + k + '" style="--c:' + c.color + '" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + c.glifo + '"/></svg><span>' + esc(CORTO[k]) + '</span><b data-prog="' + k + '"></b></button>'; }).join("");
+      d.addEventListener("click", function (ev) { if (ev.target.closest("[data-ruta]")) return; var b = ev.target.closest("[data-capa]"); if (!b) return; var k = b.getAttribute("data-capa"); ponerFoco(foco === k ? null : k); });
       return d;
     };
     capas.addTo(mapa);
@@ -4124,6 +4153,114 @@ var qrcode = function() {
         medir("capa/" + k, CORTO[k]);
       }
     }
+    // ---- Logros, racha, ruta del día y compartir progreso (23/11) ----
+    var HOY = new Date(), HOYS = HOY.toISOString().slice(0, 10);
+    var dias = leer("dias", []); if (dias.indexOf(HOYS) === -1) { dias.push(HOYS); dias = dias.slice(-60); guardar("dias", dias); }
+    function racha() { var n = 0, d = new Date(HOYS + "T12:00:00Z"); while (dias.indexOf(d.toISOString().slice(0, 10)) !== -1) { n++; d.setUTCDate(d.getUTCDate() - 1); } return n; }
+    function cuenta(cat) { return lugares.filter(function (f) { return visitados[f.properties.id] && (!cat || f.properties.categoria === cat); }).length; }
+    function regionesVisitadas() { var r = {}; lugares.forEach(function (f) { if (visitados[f.properties.id] && f.properties.region) r[f.properties.region] = 1; }); return Object.keys(r).length; }
+    var LOGROS = [
+      { id: "primer", ico: "👣", nom: "Primer paso", txt: "Marca tu primer lugar", ok: function () { return cuenta() >= 1; } },
+      { id: "col5", ico: "⭐", nom: "Cazador", txt: "5 coleccionables", ok: function () { return cuenta("coleccionable") >= 5; } },
+      { id: "col20", ico: "🌟", nom: "Coleccionista", txt: "20 coleccionables", ok: function () { return cuenta("coleccionable") >= 20; } },
+      { id: "colall", ico: "👑", nom: "Leyenda de Leonida", txt: "Todos los coleccionables", ok: function () { var t = totalesCat("coleccionable"); return t[1] && t[0] === t[1]; } },
+      { id: "sec1", ico: "🕵️", nom: "Detective", txt: "Tu primer secreto", ok: function () { return cuenta("secreto") >= 1; } },
+      { id: "secall", ico: "👽", nom: "Conspiranoico", txt: "Todos los secretos", ok: function () { var t = totalesCat("secreto"); return t[1] && t[0] === t[1]; } },
+      { id: "regiones", ico: "🧭", nom: "Trotamundos", txt: "Lugares en 4 regiones", ok: function () { return regionesVisitadas() >= 4; } },
+      { id: "ruta", ico: "🗺️", nom: "Ruta del día", txt: "Completa una ruta del día", ok: function () { return !!leer("ruta_hecha", null); } },
+      { id: "racha3", ico: "🔥", nom: "Enganchado", txt: "Vuelve 3 días seguidos", ok: function () { return racha() >= 3; } },
+      { id: "racha7", ico: "🏆", nom: "Vecino de Vice City", txt: "7 días seguidos", ok: function () { return racha() >= 7; } }
+    ];
+    var logrados = leer("logros", {});
+    var tarjeta = document.createElement("div"); tarjeta.className = "tarjeta logros"; tarjeta.id = "logros";
+    var prog = document.querySelector(".tarjeta.progreso"); if (prog) prog.parentNode.insertBefore(tarjeta, prog.nextSibling);
+    function pintarLogros() {
+      var n = LOGROS.filter(function (l) { return logrados[l.id]; }).length, r = racha();
+      tarjeta.innerHTML = '<div class="fila-entre"><h2>Logros</h2><span class="num"><b>' + n + "/" + LOGROS.length + '</b> · <span class="racha" title="Días seguidos entrando">🔥 ' + r + (r === 1 ? " día" : " días") + "</span></span></div>" +
+        '<div class="medallas">' + LOGROS.map(function (l) { return '<span class="medalla' + (logrados[l.id] ? " si" : "") + '" title="' + esc(l.nom + ": " + l.txt) + '"><i>' + l.ico + "</i><small>" + esc(l.nom) + "</small></span>"; }).join("") + "</div>" +
+        '<div class="fila-botones"><button type="button" class="btn-sec" data-ruta="1" aria-pressed="' + (capaRuta ? "true" : "false") + '">🗺️ Ruta del día</button><button type="button" class="btn-sec" data-compartir="1">📸 Compartir mi progreso</button></div>';
+    }
+    function comprobarLogros(silencio) {
+      var nuevos = LOGROS.filter(function (l) { return !logrados[l.id] && l.ok(); });
+      nuevos.forEach(function (l) { logrados[l.id] = HOYS; }); if (nuevos.length) guardar("logros", logrados);
+      pintarLogros();
+      if (!silencio && nuevos.length) { var l = nuevos[0]; vibrar([20, 50, 20, 50, 30]); aviso('<span class="t-logro">' + l.ico + '</span><b>¡Logro desbloqueado!</b> ' + esc(l.nom) + "<small>" + esc(l.txt) + "</small>", 3600); medir("logro/" + l.id, l.nom); }
+    }
+    comprobarLogros(true);
+    if (racha() >= 2 && !leer("racha_vista_" + HOYS, false)) { guardar("racha_vista_" + HOYS, true); setTimeout(function () { aviso("<b>🔥 Racha de " + racha() + " días.</b> Vuelve mañana para mantenerla.", 3200); comprobarLogros(); }, 3600); }
+
+    // Ruta del día: 5 coleccionables cercanos que aún no tienes, iguales para todos ese día
+    var capaRuta = null, rutaIds = [];
+    function semilla(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return function () { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 10000) / 10000; }; }
+    function calcularRuta() {
+      var todos = lugares.filter(function (f) { return f.properties.categoria === "coleccionable"; });
+      var cand = todos.filter(function (f) { return !visitados[f.properties.id]; }); if (cand.length < 5) cand = todos;
+      var rnd = semilla(HOYS), ini = cand[Math.floor(rnd() * cand.length)], ruta = [ini], resto = cand.filter(function (f) { return f !== ini; });
+      while (ruta.length < Math.min(5, cand.length)) {
+        var u = ruta[ruta.length - 1].geometry.coordinates; resto.sort(function (a, b) { var A = a.geometry.coordinates, B = b.geometry.coordinates; return (A[0] - u[0]) * (A[0] - u[0]) + (A[1] - u[1]) * (A[1] - u[1]) - ((B[0] - u[0]) * (B[0] - u[0]) + (B[1] - u[1]) * (B[1] - u[1])); });
+        ruta.push(resto.shift());
+      }
+      return ruta.map(function (f) { return f.properties.id; });
+    }
+    function pintarRuta() {
+      if (!capaRuta) return;
+      capaRuta.clearLayers();
+      var pts = rutaIds.map(function (id) { return marcadores[id].m.getLatLng(); });
+      L.polyline(pts, { className: "ruta-dia", weight: 4, color: "#ffe066", opacity: .95, interactive: false }).addTo(capaRuta);
+      rutaIds.forEach(function (id, i) { L.marker(pts[i], { interactive: false, keyboard: false, icon: L.divIcon({ className: "", html: '<span class="ruta-n' + (visitados[id] ? " si" : "") + '">' + (visitados[id] ? "✓" : i + 1) + "</span>", iconSize: [18, 18], iconAnchor: [-8, 26] }) }).addTo(capaRuta); });
+      var hechos = rutaIds.filter(function (id) { return visitados[id]; }).length;
+      if (hechos === rutaIds.length && rutaIds.length && leer("ruta_hecha", null) !== HOYS) { guardar("ruta_hecha", HOYS); setTimeout(function () { aviso("<b>🗺️ ¡Ruta del día completada!</b> Mañana habrá otra.", 3500); comprobarLogros(); }, 2800); }
+    }
+    function alternarRuta() {
+      if (capaRuta) { mapa.removeLayer(capaRuta); capaRuta = null; document.querySelectorAll("[data-ruta]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); return; }
+      rutaIds = calcularRuta(); capaRuta = L.layerGroup().addTo(mapa);
+      if (foco !== "coleccionable") ponerFoco("coleccionable");
+      document.querySelectorAll("[data-ruta]").forEach(function (b) { b.setAttribute("aria-pressed", "true"); });
+      pintarRuta(); vibrar(15);
+      setTimeout(function () { mapa.flyToBounds(L.latLngBounds(rutaIds.map(function (id) { return marcadores[id].m.getLatLng(); })).pad(.5), { duration: .8, maxZoom: 2 }); }, 750);
+      var hechos = rutaIds.filter(function (id) { return visitados[id]; }).length;
+      setTimeout(function () { aviso("<b>🗺️ Ruta del día:</b> " + rutaIds.length + " coleccionables cercanos" + (hechos ? " (llevas " + hechos + ")" : "") + ". Síguelos en orden y márcalos al conseguirlos.", 3800); }, 900);
+      medir("ruta/" + HOYS);
+      if (window.innerWidth <= 760) setPanelSiExiste(false);
+    }
+    function setPanelSiExiste(v) { try { if (typeof setPanel === "function") setPanel(v); } catch (e) {} }
+
+    // Compartir progreso como imagen (1080x1350, para historias y redes)
+    function compartirProgreso() {
+      var W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H; var c = cv.getContext("2d");
+      var img = new Image(); img.onload = dibujar; img.onerror = dibujar; img.src = BASES.dia || BASES[Object.keys(BASES)[0]];
+      function dibujar() {
+        var g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1a0f2e"); g.addColorStop(.55, "#0b1622"); g.addColorStop(1, "#06121b"); c.fillStyle = g; c.fillRect(0, 0, W, H);
+        if (img.naturalWidth) { var mh = 800, mw = mh * ANCHO / ALTO, mx = W - mw - 10, my = 300; c.save(); c.globalAlpha = .4; c.drawImage(img, mx, my, mw, mh); c.restore();
+          [[mx, 0, mx + 140, 0], [0, my, 0, my + 120], [0, my + mh, 0, my + mh - 120]].forEach(function (q) { var gg = c.createLinearGradient(q[0], q[1], q[2], q[3]); gg.addColorStop(0, "#0b1622"); gg.addColorStop(1, "rgba(11,22,34,0)"); c.fillStyle = gg; c.fillRect(mx - 2, q[1] === my + mh ? my + mh - 120 : my - 2, mw + 4, q[1] === 0 ? mh + 4 : 122); });
+          c.save(); lugares.forEach(function (f) { if (!visitados[f.properties.id]) return; var x = mx + f.geometry.coordinates[0] / ANCHO * mw, y = my + f.geometry.coordinates[1] / ALTO * mh; c.fillStyle = (CATEGORIAS[f.properties.categoria] || {}).color || "#ff4fa3"; c.beginPath(); c.arc(x, y, 9, 0, 6.3); c.fill(); c.lineWidth = 3; c.strokeStyle = "#fff"; c.stroke(); }); c.restore(); }
+        c.fillStyle = "#ff4fa3"; c.font = "700 34px system-ui, sans-serif"; c.fillText("MI PROGRESO EN GTA 6", 70, 120);
+        c.fillStyle = "#fff"; c.font = "800 82px system-ui, sans-serif"; c.fillText("Atlas de Leonida", 70, 210);
+        var filas = [["coleccionable", "Coleccionables"], ["secreto", "Secretos"], ["armas", "Ammu-Nation"], ["servicio", "Pay 'n' Spray"], ["propiedad", "Garajes"]], y = 340;
+        filas.forEach(function (fl) { var t = totalesCat(fl[0]); if (!t[1]) return; var col = (CATEGORIAS[fl[0]] || {}).color;
+          c.fillStyle = "#e9eef4"; c.font = "600 38px system-ui, sans-serif"; c.fillText(fl[1], 70, y);
+          c.fillStyle = col; c.font = "800 52px system-ui, sans-serif"; c.fillText(t[0] + "/" + t[1], 70, y + 62);
+          c.fillStyle = "rgba(255,255,255,.12)"; c.fillRect(280, y + 36, 200, 18); c.fillStyle = col; c.fillRect(280, y + 36, 200 * t[0] / t[1], 18); y += 150; });
+        var nl = LOGROS.filter(function (l) { return logrados[l.id]; });
+        c.fillStyle = "#e9eef4"; c.font = "600 38px system-ui, sans-serif"; c.fillText("Logros: " + nl.length + "/" + LOGROS.length + "   🔥 " + racha() + (racha() === 1 ? " día" : " días"), 70, y + 10);
+        c.font = "64px system-ui, sans-serif"; c.fillText(nl.map(function (l) { return l.ico; }).join(" ").slice(0, 40), 70, y + 100);
+        c.fillStyle = "#2ee6d6"; c.font = "800 50px system-ui, sans-serif"; c.fillText("atlasdeleonida.com", 70, H - 90);
+        c.fillStyle = "#8aa0b6"; c.font = "500 26px system-ui, sans-serif"; c.fillText("Mapa de fans, no oficial · ¿Cuántos llevas tú?", 70, H - 45);
+        cv.toBlob(function (bl) {
+          if (!bl) return; var f = null; try { f = new File([bl], "mi-progreso-gta6.png", { type: "image/png" }); } catch (e) {}
+          var txt = "Llevo " + totalesCat("coleccionable")[0] + "/" + totalesCat("coleccionable")[1] + " coleccionables de GTA 6 en el Atlas de Leonida. ¿Y tú?";
+          if (f && navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], text: txt, url: "https://atlasdeleonida.com/" }).catch(function () {});
+          else { var a = document.createElement("a"); a.href = URL.createObjectURL(bl); a.download = "mi-progreso-gta6.png"; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); aviso("<b>📸 Imagen guardada.</b> Súbela a tus historias.", 2600); }
+          medir("compartir/progreso");
+        }, "image/png");
+      }
+    }
+    document.addEventListener("click", function (ev) {
+      if (ev.target.closest("[data-ruta]")) alternarRuta();
+      else if (ev.target.closest("[data-compartir]")) compartirProgreso();
+    });
+    window.__atlas = { calcularRuta: calcularRuta, racha: racha, logrados: function () { return logrados; } };
+
     progCapas();
     if (!leer("intro_capas", false)) setTimeout(function () {
       guardar("intro_capas", true); var b = document.querySelector('[data-capa="coleccionable"]');
