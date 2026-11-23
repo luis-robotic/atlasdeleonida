@@ -923,7 +923,7 @@ code { background: var(--noche); padding: 1px 5px; border-radius: 4px; }
   .leaflet-top.leaflet-right { flex-direction: column; align-items: flex-end; }
   .barra-mapa { flex-direction: column; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
 .cerca .leaflet-overlay-pane svg path[stroke-dasharray] { opacity: .25; }
 
 /* Barra de herramientas del mapa (Mobalytics) */
@@ -1000,6 +1000,51 @@ code { background: var(--noche); padding: 1px 5px; border-radius: 4px; }
 .pop-nivel { display: inline-block; margin: 6px 0 0; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
 .gsec.destacada { outline: 2px solid var(--neon); box-shadow: 0 0 24px rgba(255,79,163,.45); transition: box-shadow .3s; }
 #panel.en-guias footer.aviso { display: none; }
+
+/* ---- Enganche visual (23/11): aparición de puntos, capas rápidas, celebración, avisos, respuesta al tocar ---- */
+.mk { animation: mk-entra .42s cubic-bezier(.2,1.5,.45,1) backwards; animation-delay: var(--d, 0ms); }
+@keyframes mk-entra { from { transform: scale(0) translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+.mk.activo { animation: mk-entra .3s cubic-bezier(.2,1.5,.45,1) backwards; }
+.mk.activo::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--c); animation: onda 1.4s ease-out infinite; pointer-events: none; }
+@keyframes onda { from { transform: scale(1); opacity: .9; } to { transform: scale(2.3); opacity: 0; } }
+.con-foco .mk { scale: 1.12; box-shadow: 0 0 0 1.5px rgba(255,255,255,.9), 0 0 14px var(--c), 0 3px 8px rgba(0,0,0,.55); }
+.con-foco .mk.visto { box-shadow: 0 0 0 1.5px rgba(255,255,255,.6), 0 3px 8px rgba(0,0,0,.55); }
+.leaflet-popup { animation: pop-entra .22s cubic-bezier(.2,1.2,.4,1) both; transform-origin: 50% 100%; }
+@keyframes pop-entra { from { opacity: 0; margin-bottom: 6px; } to { opacity: 1; } }
+button, .pill, .leaflet-control-zoom a { transition: transform .12s, background-color .15s, border-color .15s, box-shadow .15s; }
+button:active:not(:disabled), .leaflet-control-zoom a:active { transform: scale(.94); }
+.leaflet-popup-content button[data-acc="visto"] { background: var(--neon); border-color: var(--neon); color: #fff; font-weight: 700; }
+
+.capas-rapidas { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; max-width: calc(100vw - 96px); padding: 2px 2px 6px; -webkit-overflow-scrolling: touch; }
+.capas-rapidas::-webkit-scrollbar { display: none; }
+.leaflet-control.capas-rapidas { background: none !important; border: 0 !important; box-shadow: none !important; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 28px; }
+@media (max-width: 760px) { .con-popup .capas-rapidas, .con-popup .abrir-panel { opacity: 0; pointer-events: none; } .capas-rapidas { transition: opacity .2s; } .capas-rapidas button { height: 34px; font-size: 12.5px; padding: 0 9px 0 7px; } }
+.panel-cerrado .capas-rapidas { margin-top: 52px; }
+.capas-rapidas button { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 11px 0 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: rgba(14,21,31,.92); color: #e9eef4; font: 600 13px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.4); backdrop-filter: blur(6px); }
+.capas-rapidas svg { width: 17px; height: 17px; fill: none; stroke: var(--c); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.capas-rapidas b { font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--suave, #9fb0c3); }
+.capas-rapidas b.lleno { background: var(--ok); color: #06210f; }
+.capas-rapidas button:hover { border-color: var(--c); }
+.capas-rapidas button[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #0b1119; box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 6px 18px rgba(0,0,0,.45), 0 0 22px var(--c); }
+.capas-rapidas button[aria-pressed="true"] svg { stroke: #0b1119; }
+.capas-rapidas button[aria-pressed="true"] b { background: rgba(0,0,0,.2); color: #0b1119; }
+.capas-rapidas button.llamada { animation: llamada 1s ease-in-out 4; }
+@keyframes llamada { 50% { transform: scale(1.08); box-shadow: 0 0 0 6px rgba(255,224,102,.25), 0 0 24px var(--c); } }
+
+.toast { position: fixed; z-index: 4000; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; pointer-events: none; width: max-content; max-width: min(92vw, 420px); background: rgba(14,21,31,.97); color: #e9eef4; border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 11px 14px; font: 14px/1.4 system-ui, sans-serif; box-shadow: 0 12px 34px rgba(0,0,0,.55); transition: opacity .25s, transform .3s cubic-bezier(.2,1.3,.4,1); }
+.toast.ver { opacity: 1; transform: translate(-50%, 0); }
+.toast b { color: #fff; }
+.toast small { display: block; color: #9fb0c3; font-size: 12px; margin-top: 4px; }
+.toast .t-barra { display: block; height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); margin-top: 8px; overflow: hidden; }
+.toast .t-barra span { display: block; height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.2,1,.3,1); }
+.confeti { position: fixed; z-index: 4100; width: 0; height: 0; pointer-events: none; }
+.confeti i { position: absolute; width: 7px; height: 11px; border-radius: 2px; left: -3px; top: -5px; animation: confeti .95s cubic-bezier(.15,.7,.3,1) forwards; }
+@keyframes confeti { to { transform: translate(var(--x), calc(var(--y) + 70px)) rotate(var(--r)); opacity: 0; } }
+.barra-prog span, #progreso-barra { transition: width .6s cubic-bezier(.2,1,.3,1); }
+/* El hueco de anuncio y el botón «próximamente» parecían sin terminar: fuera hasta que haya algo real */
+.publica .hueco-anuncio, .publica .btn-apoyo:disabled { display: none; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
 <style>/* Extras: QR, modo mando, overlay OBS */
 .dlg-qr { max-width: 360px; text-align: center; }
@@ -3671,7 +3716,7 @@ var qrcode = function() {
       return d;
     };
     selEst.addTo(mapa);
-    mapa.setMaxBounds([[-200, -200], [ALTO + 200, ANCHO + 200]]);
+    mapa.setMaxBounds([[-300, -250], [ALTO + 900, ANCHO + 250]]); // margen arriba para que las fichas de puntos del norte quepan
     // Barra de herramientas: compartir, info, pantalla completa, centrar
     var barra = L.control({ position: "topright" });
     barra.onAdd = function () {
@@ -3713,10 +3758,12 @@ var qrcode = function() {
     mapa.on("zoomend", function () { zoomCondados(); if (typeof pintar === "function") pintar(); }); zoomCondados();
     var marcadores = {};
     var activo = null;
+    var foco = null; // capa rápida activa (solo esa categoría, con todos sus puntos)
     function icono(p) {
       var c = CATEGORIAS[p.categoria] || { color: "#ccc", glifo: "M12 8v5M12 16h.01" };
       var cls = "mk" + (p.estado === "filtracion" ? " fil" : "") + (visitados[p.id] ? " visto" : "") + (activo === p.id ? " activo" : "");
-      return L.divIcon({ className: "", html: '<div class="' + cls + '" style="--c:' + c.color + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + c.glifo + '"/></svg></div>', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14], tooltipAnchor: [15, 0] });
+      var d = activo === p.id ? 0 : (p.id.length * 37 + p.id.charCodeAt(0) * 11) % 260; // aparición escalonada
+      return L.divIcon({ className: "", html: '<div class="' + cls + '" style="--c:' + c.color + ';--d:' + d + 'ms"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + c.glifo + '"/></svg></div>', iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14], tooltipAnchor: [15, 0] });
     }
     // Fuentes independientes = dominios distintos
     function dominios(p) { var d = {}; (p.fuentes || []).forEach(function (f) { try { d[new URL(f.url).hostname.replace(/^www\./, "")] = 1; } catch (e) {} }); return Object.keys(d).length; }
@@ -3737,7 +3784,7 @@ var qrcode = function() {
         })(porRegion[p.id].inspiracion_real) : "") +
         (fuentes ? '<strong style="font-size:12px">Fuentes</strong><ol class="fuentes">' + fuentes + "</ol>" : "") +
         '<div class="acciones">' +
-        '<button type="button" data-acc="visto" data-id="' + esc(p.id) + '">' + (visitados[p.id] ? "✓ Visitado" : "Marcar visitado") + "</button>" +
+        '<button type="button" data-acc="visto" data-id="' + esc(p.id) + '">' + textoVisto(p) + "</button>" +
         '<button type="button" data-acc="copiar" data-id="' + esc(p.id) + '">Copiar enlace</button>' +
         (v ? '<a class="prim" href="' + esc(v.url) + '" target="_blank" rel="noopener">▶ Ver vídeo</a>' : "") +
         "</div></div>";
@@ -3746,9 +3793,9 @@ var qrcode = function() {
     lugares.forEach(function (f) {
       var p = f.properties;
       var m = L.marker(aLatLng(f.geometry.coordinates), { icon: icono(p), title: p.nombre, keyboard: true });
-      m.bindPopup(function () { return popup(p); }, { maxWidth: 320, autoPanPadding: [20, 80] });
-      m.on("popupopen", function () { activo = p.id; medir("lugar/" + p.id, p.nombre); m.setIcon(icono(p)); if (location.hash !== "#" + p.id) history.replaceState(null, "", "#" + p.id); });
-      m.on("popupclose", function () { if (activo === p.id) activo = null; m.setIcon(icono(p)); });
+      m.bindPopup(function () { return popup(p); }, { maxWidth: 320, maxHeight: window.innerWidth <= 760 ? Math.max(240, Math.round(window.innerHeight * .52)) : null, autoPanPaddingTopLeft: [16, window.innerWidth <= 760 ? 70 : 64], autoPanPaddingBottomRight: [16, 80] });
+      m.on("popupopen", function () { document.body.classList.add("con-popup"); activo = p.id; medir("lugar/" + p.id, p.nombre); m.setIcon(icono(p)); if (location.hash !== "#" + p.id) history.replaceState(null, "", "#" + p.id); });
+      m.on("popupclose", function () { document.body.classList.remove("con-popup"); if (activo === p.id) activo = null; m.setIcon(icono(p)); });
       if (/^(ciudad|barrio|monumento|ocio|naturaleza)$/.test(p.categoria) && !porRegion[p.id])
         m.bindTooltip(esc(p.nombre), { permanent: true, direction: "right", className: "etq-lugar etq-" + p.categoria, interactive: false });
       marcadores[p.id] = { m: m, p: p };
@@ -3760,8 +3807,10 @@ var qrcode = function() {
       var id = b.getAttribute("data-id");
       if (b.getAttribute("data-acc") === "visto") {
         if (visitados[id]) delete visitados[id]; else visitados[id] = new Date().toISOString().slice(0, 10);
-        guardar("visitados", visitados); b.textContent = visitados[id] ? "✓ Visitado" : "Marcar visitado";
+        guardar("visitados", visitados); b.textContent = textoVisto(marcadores[id].p);
         marcadores[id].m.setIcon(icono(marcadores[id].p)); pintar(); pintarNiebla();
+        if (visitados[id]) celebrar(b, marcadores[id].p); else vibrar(10);
+        medir("visto/" + id + "/" + (visitados[id] ? "on" : "off"));
       } else {
         var url = location.href.split("#")[0] + "#" + id;
         var hecho = function () { b.textContent = "Enlace copiado"; };
@@ -3835,11 +3884,12 @@ var qrcode = function() {
 
     function pasa(p, ignorar) {
       if (ignorar !== "estado" && !filtros.estado[estadoEf(p)]) return false;
-      if (ignorar !== "cat" && !filtros.cat[p.categoria]) return false;
+      if (foco && ignorar !== "cat") { if (p.categoria !== foco && activo !== p.id) return false; }
+      else if (ignorar !== "cat" && !filtros.cat[p.categoria]) return false;
       if (ignorar !== "region" && !filtros.region[p.region]) return false;
       if (filtros.ocultarVisitados && visitados[p.id]) return false;
       // Con el mapa alejado y sin búsqueda, solo lo principal para que no se amontone
-      if (ignorar === "mapa" && !q.value.trim() && mapa.getZoom() < 0.75 && !(porRegion[p.id] || p.categoria === "ciudad")) return false;
+      if (ignorar === "mapa" && !q.value.trim() && mapa.getZoom() < 0.75 && !foco && !(porRegion[p.id] || p.categoria === "ciudad")) return false;
       var t = sinAcentos(q.value.trim());
       if (t) {
         var reg = porRegion[p.region];
@@ -3877,6 +3927,7 @@ var qrcode = function() {
       var total = lugares.length, hechos = lugares.filter(function (f) { return visitados[f.properties.id]; }).length;
       $("progreso-txt").textContent = hechos + "/" + total;
       $("progreso-barra").style.width = (total ? (100 * hechos / total) : 0) + "%";
+      progCapas();
     }
 
     // Modo niebla: como en el juego, solo se ve lo que has visitado (radio de 45 unidades alrededor de cada lugar visitado)
@@ -4010,6 +4061,75 @@ var qrcode = function() {
       coords.hidden = false; coords.textContent = "Coordenadas: " + txt + " (copiado)";
       try { navigator.clipboard.writeText(txt).catch(function () {}); } catch (err) {}
     });
+
+    // ---- Enganche (23/11): capas rápidas, celebración al encontrar, avisos y respuesta táctil ----
+    var CORTO = { coleccionable: "Coleccionables", secreto: "Secretos", armas: "Armas", servicio: "Pay 'n' Spray", propiedad: "Garajes" };
+    var RAPIDAS = Object.keys(CORTO).filter(function (k) { return usadas[k]; });
+    function totalesCat(k) { var t = 0, h = 0; lugares.forEach(function (f) { if (f.properties.categoria === k) { t++; if (visitados[f.properties.id]) h++; } }); return [h, t]; }
+    function textoVisto(p) {
+      var col = p.categoria === "coleccionable" || p.categoria === "secreto";
+      return visitados[p.id] ? (col ? "✓ Lo tengo" : "✓ Visitado") : (col ? "Marcar como conseguido" : "Marcar visitado");
+    }
+    function vibrar(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 18); } catch (e) {} }
+    var tToast;
+    function aviso(html, ms) {
+      var t = $("toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+      t.innerHTML = html; t.classList.remove("ver"); void t.offsetWidth; t.classList.add("ver");
+      clearTimeout(tToast); tToast = setTimeout(function () { t.classList.remove("ver"); }, ms || 2600);
+    }
+    function celebrar(el, p) {
+      vibrar([14, 40, 22]);
+      var r = el.getBoundingClientRect(), capa = document.createElement("div"), c = (CATEGORIAS[p.categoria] || {}).color || "#ff4fa3";
+      capa.className = "confeti"; capa.style.left = (r.left + r.width / 2) + "px"; capa.style.top = (r.top + r.height / 2) + "px";
+      var cols = [c, "#ff4fa3", "#2ee6d6", "#ffe066", "#fff"], html = "";
+      for (var i = 0; i < 18; i++) { var a = (i / 18) * 6.283 + Math.random() * .4, dist = 50 + Math.random() * 60; html += '<i style="--x:' + Math.round(Math.cos(a) * dist) + "px;--y:" + Math.round(Math.sin(a) * dist - 30) + "px;--r:" + Math.round(Math.random() * 540 - 270) + "deg;background:" + cols[i % cols.length] + '"></i>'; }
+      capa.innerHTML = html; document.body.appendChild(capa); setTimeout(function () { capa.remove(); }, 1100);
+      var tc = totalesCat(p.categoria), nom = CORTO[p.categoria] || (CATEGORIAS[p.categoria] || {}).nombre || "";
+      var tot = lugares.filter(function (f) { return visitados[f.properties.id]; }).length;
+      aviso('<b>' + (p.categoria === "coleccionable" || p.categoria === "secreto" ? "¡Conseguido!" : "¡Visitado!") + "</b> " + tc[0] + "/" + tc[1] + " " + esc(nom.toLowerCase()) +
+        '<span class="t-barra"><span style="width:' + Math.round(100 * tc[0] / Math.max(1, tc[1])) + '%;background:' + c + '"></span></span><small>' + tot + " de " + lugares.length + " lugares en total</small>");
+      if (tc[0] === tc[1] && tc[1] > 1) setTimeout(function () { aviso("<b>🏆 ¡Colección completa!</b> Tienes todos los " + esc(nom.toLowerCase()) + ".", 4000); }, 2700);
+    }
+    var capas = L.control({ position: "topleft" });
+    capas.onAdd = function () {
+      var d = L.DomUtil.create("div", "capas-rapidas"); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+      d.setAttribute("role", "toolbar"); d.setAttribute("aria-label", "Ver solo una categoría");
+      d.innerHTML = RAPIDAS.map(function (k) { var c = CATEGORIAS[k]; return '<button type="button" data-capa="' + k + '" style="--c:' + c.color + '" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + c.glifo + '"/></svg><span>' + esc(CORTO[k]) + '</span><b data-prog="' + k + '"></b></button>'; }).join("");
+      d.addEventListener("click", function (ev) { var b = ev.target.closest("[data-capa]"); if (!b) return; var k = b.getAttribute("data-capa"); ponerFoco(foco === k ? null : k); });
+      return d;
+    };
+    capas.addTo(mapa);
+    // Que la ficha nunca quede tapada ni salga por arriba (el autoPan de Leaflet fallaba con fichas altas)
+    mapa.on("popupopen", function (e) {
+      setTimeout(function () {
+        var el = e.popup.getElement(); if (!el) return;
+        var r = el.getBoundingClientRect(), m = $("mapa").getBoundingClientRect(), top = m.top + (window.innerWidth <= 760 ? 16 : 60), bot = m.bottom - 70, dy = 0;
+        if (r.top < top) dy = r.top - top; else if (r.bottom > bot) dy = Math.min(r.bottom - bot, r.top - top);
+        if (dy) mapa.panBy([0, dy], { duration: .35 });
+      }, 80);
+    });
+    function progCapas() {
+      if (!RAPIDAS) return;
+      RAPIDAS.forEach(function (k) { var s = document.querySelector('[data-prog="' + k + '"]'); if (!s) return; var tc = totalesCat(k); s.textContent = tc[0] ? tc[0] + "/" + tc[1] : tc[1]; s.classList.toggle("lleno", tc[0] === tc[1] && tc[1] > 0); });
+    }
+    function ponerFoco(k) {
+      foco = k; vibrar(12);
+      document.querySelectorAll("[data-capa]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-capa") === k ? "true" : "false"); });
+      $("mapa").classList.toggle("con-foco", !!k);
+      mapa.closePopup(); pintar();
+      if (k) {
+        var ll = Object.keys(marcadores).filter(function (id) { return marcadores[id].p.categoria === k; }).map(function (id) { return marcadores[id].m.getLatLng(); });
+        if (ll.length) mapa.flyToBounds(L.latLngBounds(ll).pad(.12), { duration: .7, maxZoom: 1.25 });
+        var tc = totalesCat(k); aviso("<b>" + esc(CORTO[k]) + ":</b> " + tc[1] + " en el mapa" + (tc[0] ? ", llevas " + tc[0] : "") + ". Toca uno para ver dónde y cómo. Vuelve a tocar el botón para ver todo.", 3400);
+        medir("capa/" + k, CORTO[k]);
+      }
+    }
+    progCapas();
+    if (!leer("intro_capas", false)) setTimeout(function () {
+      guardar("intro_capas", true); var b = document.querySelector('[data-capa="coleccionable"]');
+      if (b) { b.classList.add("llamada"); setTimeout(function () { b.classList.remove("llamada"); }, 4200); }
+      aviso("<b>Nuevo:</b> toca <b>Coleccionables</b>, <b>Secretos</b> o <b>Armas</b> arriba para verlos todos en el mapa y marcar los que consigas.", 4200);
+    }, 2200);
 
     function porHash() {
       var h = decodeURIComponent(location.hash.slice(1));
