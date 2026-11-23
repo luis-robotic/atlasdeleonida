@@ -1070,6 +1070,25 @@ button:active:not(:disabled), .leaflet-control-zoom a:active { transform: scale(
 .leaflet-tooltip.prev b { display: block; color: #fff; }
 .leaflet-tooltip.prev small { color: #9fb0c3; font-size: 11.5px; }
 .leaflet-tooltip.prev::before { border-top-color: rgba(14,21,31,.96); }
+
+
+/* Burbujas de puntos agrupados */
+.grupo-mk { position: relative; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #22324a, #0e1622); border: 2.5px solid var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 28%, transparent), 0 0 0 1.5px rgba(255,255,255,.85), 0 4px 12px rgba(0,0,0,.55); color: #fff; cursor: pointer; animation: mk-entra .4s cubic-bezier(.2,1.5,.45,1) backwards; transition: transform .15s; }
+.grupo-mk b { font: 800 14px/1 system-ui, sans-serif; }
+.grupo-mk i { position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); font: 800 9px/1 system-ui, sans-serif; font-style: normal; background: var(--ok); color: #06210f; padding: 2px 4px; border-radius: 999px; white-space: nowrap; }
+.grupo-mk.todo { opacity: .7; }
+.grupo-mk:hover { transform: scale(1.12); }
+
+
+/* Modo foto */
+#salir-foto { display: none; }
+.modo-foto #salir-foto { display: block; }
+.modo-foto .leaflet-control-container .leaflet-control:not(.leaflet-control-attribution), .modo-foto .abrir-panel, .modo-foto #panel, .modo-foto .toast { display: none !important; }
+.modo-foto .mapa { left: 0 !important; }
+#salir-foto button { position: fixed; z-index: 3500; top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(14,21,31,.55); color: #fff; font: 600 12.5px/1 system-ui, sans-serif; cursor: pointer; backdrop-filter: blur(4px); opacity: .7; }
+#salir-foto button:hover { opacity: 1; }
+.marca-foto { position: fixed; z-index: 3500; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); font: 800 15px/1 system-ui, sans-serif; letter-spacing: .02em; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.7); pointer-events: none; }
+.marca-foto::before { content: "ATLAS DE LEONIDA · "; color: #ff8bc6; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
 <style>/* Extras: QR, modo mando, overlay OBS */
@@ -3750,11 +3769,13 @@ var qrcode = function() {
       d.innerHTML = '<button type="button" data-h="compartir" title="Copiar enlace a esta vista" aria-label="Compartir"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 14v6h14v-6"/></svg></button>' +
         '<button type="button" data-h="info" title="Leyenda e información" aria-label="Información"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></button>' +
         '<button type="button" data-h="pantalla" title="Pantalla completa" aria-label="Pantalla completa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>' +
+        '<button type="button" data-h="foto" title="Modo foto: mapa limpio para capturas" aria-label="Modo foto"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>' +
         '<button type="button" data-h="centrar" title="Ver todo Leonida" aria-label="Centrar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>';
       L.DomEvent.disableClickPropagation(d);
       d.addEventListener("click", function (ev) {
         var b = ev.target.closest("[data-h]"); if (!b) return; var h = b.getAttribute("data-h"); medir("barra/" + h);
         if (h === "centrar") mapa.flyToBounds(limites, { duration: .6 });
+        else if (h === "foto") modoFoto(true);
         else if (h === "pantalla") { var el = document.documentElement; if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }
         else if (h === "info") { var dlg = document.getElementById("info"); if (dlg && dlg.showModal) dlg.showModal(); }
         else if (h === "compartir") { var u = location.href; if (navigator.share) navigator.share({ title: document.title, url: u }).catch(function () {}); else if (navigator.clipboard) navigator.clipboard.writeText(u).then(function () { b.classList.add("ok"); setTimeout(function () { b.classList.remove("ok"); }, 1200); }); }
@@ -3785,6 +3806,7 @@ var qrcode = function() {
     var marcadores = {};
     var activo = null;
     var CON_RATON = window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
+    var capaGrupos = null;
     var foco = null; // capa rápida activa (solo esa categoría, con todos sus puntos)
     function icono(p) {
       var c = CATEGORIAS[p.categoria] || { color: "#ccc", glifo: "M12 8v5M12 16h.01" };
@@ -3929,12 +3951,37 @@ var qrcode = function() {
     }
 
     function pintar() {
-      var visibles = [];
+      var visibles = [], enMapaIds = [];
       Object.keys(marcadores).forEach(function (id) {
         var o = marcadores[id];
         var enLista = pasa(o.p), enMapa = enLista && (pasa(o.p, "mapa") || activo === o.p.id);
         if (enLista) visibles.push(o.p);
-        if (enMapa) { if (!mapa.hasLayer(o.m)) o.m.addTo(mapa); } else if (mapa.hasLayer(o.m)) mapa.removeLayer(o.m);
+        if (enMapa) enMapaIds.push(id);
+      });
+      // Agrupar puntos que se pisan (23/11): burbuja con el número; al tocarla se acerca y se separan
+      if (!capaGrupos) capaGrupos = L.layerGroup().addTo(mapa);
+      capaGrupos.clearLayers();
+      var agrupados = {}, z = mapa.getZoom();
+      if (z < 2.5 && enMapaIds.length > 1) {
+        var R = 26, pts = enMapaIds.map(function (id) { return { id: id, pt: mapa.project(marcadores[id].m.getLatLng(), z) }; }), usado = {};
+        pts.forEach(function (a) {
+          if (usado[a.id] || a.id === activo || enRuta(a.id)) return;
+          var g = pts.filter(function (b) { return !usado[b.id] && b.id !== activo && !enRuta(b.id) && Math.abs(b.pt.x - a.pt.x) < R && Math.abs(b.pt.y - a.pt.y) < R; });
+          if (g.length < 2) return;
+          g.forEach(function (b) { usado[b.id] = 1; agrupados[b.id] = 1; });
+          var ll = g.map(function (b) { return marcadores[b.id].m.getLatLng(); }), bb = L.latLngBounds(ll), cats = {};
+          g.forEach(function (b) { var c = marcadores[b.id].p.categoria; cats[c] = (cats[c] || 0) + 1; });
+          var cp = Object.keys(cats).sort(function (x, y) { return cats[y] - cats[x]; })[0], col = (CATEGORIAS[cp] || {}).color || "#ff4fa3";
+          var hechos = g.filter(function (b) { return visitados[b.id]; }).length;
+          var gm = L.marker(bb.getCenter(), { keyboard: true, title: g.length + " lugares", icon: L.divIcon({ className: "", html: '<div class="grupo-mk' + (hechos === g.length ? " todo" : "") + '" style="--c:' + col + '"><b>' + g.length + "</b>" + (hechos ? "<i>" + hechos + "✓</i>" : "") + "</div>", iconSize: [36, 36], iconAnchor: [18, 18] }) });
+          gm.on("click", function () { vibrar(10); mapa.flyToBounds(bb.pad(.6), { duration: .5, maxZoom: Math.max(z + 1.5, 2.75) }); });
+          if (CON_RATON) gm.bindTooltip("<b>" + g.length + " lugares</b><small>" + g.slice(0, 4).map(function (b) { return esc(marcadores[b.id].p.nombre); }).join(" · ") + (g.length > 4 ? "…" : "") + "</small>", { direction: "top", offset: [0, -16], className: "prev", opacity: 1 });
+          gm.addTo(capaGrupos);
+        });
+      }
+      Object.keys(marcadores).forEach(function (id) {
+        var o = marcadores[id], ver = enMapaIds.indexOf(id) !== -1 && !agrupados[id];
+        if (ver) { if (!mapa.hasLayer(o.m)) o.m.addTo(mapa); } else if (mapa.hasLayer(o.m)) mapa.removeLayer(o.m);
       });
       // contadores por chip (cuántos aparecerían al activarlo)
       document.querySelectorAll("[data-n]").forEach(function (s) {
@@ -3978,6 +4025,7 @@ var qrcode = function() {
 
     function abrir(id) {
       var o = marcadores[id]; if (!o) return;
+      activo = id; // así no queda dentro de una burbuja
       if (!mapa.hasLayer(o.m)) o.m.addTo(mapa);
       mapa.flyTo(o.m.getLatLng(), Math.max(mapa.getZoom(), 1), { duration: .6 });
       setTimeout(function () { o.m.openPopup(); }, 650);
@@ -4191,6 +4239,7 @@ var qrcode = function() {
 
     // Ruta del día: 5 coleccionables cercanos que aún no tienes, iguales para todos ese día
     var capaRuta = null, rutaIds = [];
+    function enRuta(id) { return !!capaRuta && rutaIds.indexOf(id) !== -1; }
     function semilla(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return function () { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 10000) / 10000; }; }
     function calcularRuta() {
       var todos = lugares.filter(function (f) { return f.properties.categoria === "coleccionable"; });
@@ -4212,11 +4261,11 @@ var qrcode = function() {
       if (hechos === rutaIds.length && rutaIds.length && leer("ruta_hecha", null) !== HOYS) { guardar("ruta_hecha", HOYS); setTimeout(function () { aviso("<b>🗺️ ¡Ruta del día completada!</b> Mañana habrá otra.", 3500); comprobarLogros(); }, 2800); }
     }
     function alternarRuta() {
-      if (capaRuta) { mapa.removeLayer(capaRuta); capaRuta = null; document.querySelectorAll("[data-ruta]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); return; }
+      if (capaRuta) { mapa.removeLayer(capaRuta); capaRuta = null; pintar(); document.querySelectorAll("[data-ruta]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); }); return; }
       rutaIds = calcularRuta(); capaRuta = L.layerGroup().addTo(mapa);
       if (foco !== "coleccionable") ponerFoco("coleccionable");
       document.querySelectorAll("[data-ruta]").forEach(function (b) { b.setAttribute("aria-pressed", "true"); });
-      pintarRuta(); vibrar(15);
+      pintar(); pintarRuta(); vibrar(15);
       setTimeout(function () { mapa.flyToBounds(L.latLngBounds(rutaIds.map(function (id) { return marcadores[id].m.getLatLng(); })).pad(.5), { duration: .8, maxZoom: 2 }); }, 750);
       var hechos = rutaIds.filter(function (id) { return visitados[id]; }).length;
       setTimeout(function () { aviso("<b>🗺️ Ruta del día:</b> " + rutaIds.length + " coleccionables cercanos" + (hechos ? " (llevas " + hechos + ")" : "") + ". Síguelos en orden y márcalos al conseguirlos.", 3800); }, 900);
@@ -4267,6 +4316,19 @@ var qrcode = function() {
       if (b) { b.classList.add("llamada"); setTimeout(function () { b.classList.remove("llamada"); }, 4200); }
       aviso("<b>Nuevo:</b> toca <b>Coleccionables</b>, <b>Secretos</b> o <b>Armas</b> arriba para verlos todos en el mapa y marcar los que consigas.", 4200);
     }, 2200);
+
+    // Modo foto (23/11): quita botones y paneles para hacer capturas limpias con marca de agua
+    var panelAntesFoto = null;
+    function modoFoto(on) {
+      var b = document.body; if (on === b.classList.contains("modo-foto")) return;
+      if (on) { panelAntesFoto = !b.classList.contains("panel-cerrado"); setPanel(false); mapa.closePopup(); var t = $("toast"); if (t) t.classList.remove("ver"); }
+      b.classList.toggle("modo-foto", on);
+      var x = $("salir-foto"); if (!x) { x = document.createElement("div"); x.id = "salir-foto"; x.innerHTML = '<span class="marca-foto">atlasdeleonida.com</span><button type="button" aria-label="Salir del modo foto">✕ Salir</button>'; document.body.appendChild(x); x.querySelector("button").addEventListener("click", function () { modoFoto(false); }); }
+      setTimeout(function () { mapa.invalidateSize(); }, 280);
+      if (!on && panelAntesFoto && window.innerWidth > 760) setPanel(true);
+      if (on) { vibrar(15); medir("foto/on"); }
+    }
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("modo-foto")) modoFoto(false); });
 
     function porHash() {
       var h = decodeURIComponent(location.hash.slice(1));
